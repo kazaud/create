@@ -1,3 +1,4 @@
 cmake_minimum_required (VERSION 2.6)
+SET(CMAKE_CXX_FLAGS "-std=c++0x")
 project (Create)
-add_executable(build/Create src/create.cxx)
+add_subdirectory (skeleton skeleton/build)
