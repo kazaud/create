@@ -7,7 +7,17 @@ configure_file (
   "${CMAKE_CURRENT_LIST_DIR}/src/create_config.h.in"
   "${PROJECT_BINARY_DIR}/create_config.h")
 
+# ${skeleton_SOURCE_DIR}
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/src")
 
+include_directories(${Create_SOURCE_DIR}/gtest-1.7.0/include)
+link_directories(${Create_SOURCE_DIR}/gtest-1.7.0/src)
+
+
 add_executable(Create src/create_main.cc)
+
+# Add a test
+add_executable(runUnitTests src/create_test.cc)
+target_link_libraries(runUnitTests gtest gtest_main)
+add_test(runUnitTests runUnitTests)
