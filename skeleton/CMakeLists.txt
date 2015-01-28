@@ -10,4 +10,4 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/src")
 
-add_executable(Create src/create.cxx)
+add_executable(Create src/create_main.cc)

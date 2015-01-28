@@ -1,10 +1,10 @@
 # CMake files
-CMakeCache.txt
-CMakeFiles/
-Makefile
-*.cmake
-build/*
-skeleton/Create
+**/CMakeCache.txt
+**/CMakeFiles
+**/Makefile
+**/*.cmake
+**/build/*
+**/Create
 
 # Compiled Object files
 *.slo
