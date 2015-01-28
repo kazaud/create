@@ -1,4 +1,6 @@
-find . -name "CMakeFiles" -exec rm {} \;
-find . -name "*.cmake" -exec rm -rf {} \;
-find . -name "CMakeCache.txt" -exec rm {} \;
-find . -name "Makefile" -exec rm {} \;
+files="$files $(find . -name "CMakeCache.txt" -perm -u+w)"
+files="$files $(find . -name "*.cmake" -perm -u+w)"
+files="$files $(find . -name "Makefile" -perm -u+w)"
+files="$files $(find . -name "CMakeFiles" -perm -u+w)"
+echo $files
+rm -r $files
