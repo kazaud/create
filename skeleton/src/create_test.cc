@@ -1,9 +1,11 @@
 #include "gtest/gtest.h"
 
+#include "skeleton/src/create.h"
+
+namespace create {
 
 TEST(CreateTest, NotFinished) {
+  Create c;
 }
 
-TEST(CreateTest, Broken) {
-  EXPECT_EQ(1, 2);
-}
+}  // namespace create
