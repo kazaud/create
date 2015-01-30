@@ -9,7 +9,7 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 if(CMAKE_COMPILER_IS_GNUCXX)
 	list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs")
 endif()
-add_subdirectory (skeleton skeleton/build)
+add_subdirectory (brain brain/build)
 
 
 # Add a test
