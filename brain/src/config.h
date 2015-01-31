@@ -1,6 +1,9 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+#include <iostream>
+#include <memory>
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
@@ -54,3 +57,7 @@
 
 /* Version number of package */
 #define VERSION "0.1"
+
+using ::std::unique_ptr;
+using ::std::cout;
+using ::std::endl;

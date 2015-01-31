@@ -16,7 +16,8 @@ int main(int argc, char* argv[]) {
     fprintf(stdout, "Usage: %s serial port. I.e. /dev/ttyUSB0\n", argv[0]);
     return 1;
   }
-  SerialStream stream("/dev/ttyS0", SerialStreamBuf::BAUD_57600);
+  SerialStream stream("/dev/ttyS0");
   Create robot(stream);
+  robot.sendDemoCommand(Create::DEMO_COVER);
   return 0;
 }
