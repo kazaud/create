@@ -1,3 +1,3 @@
-// the configured options and settings for Tutorial
+//the configured options and settings for Tutorial
 constexpr int kCreateVersionMajor = @CREATE_VERSION_MAJOR@;
 constexpr int kCreateVersionMinor = @CREATE_VERSION_MINOR@;
