@@ -1,6 +1,7 @@
 #include "irobot_create.h"
 
 #include "gtest/gtest.h"
+#include "tools/make_unique.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -16,9 +17,6 @@
 
 namespace create {
 namespace {
-using ::std::cout;
-using ::std::endl;
-using ::std::string;
 using ::LibSerial::SerialStream;
 using ::LibSerial::SerialStreamBuf;
 

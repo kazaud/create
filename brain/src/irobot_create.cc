@@ -9,8 +9,6 @@
 
 using::LibSerial::SerialStream;
 using::LibSerial::SerialStreamBuf;
-using::std::cout;
-using::std::endl;
 
 //TODO: take into account the 15ms/sent command limit.
 
