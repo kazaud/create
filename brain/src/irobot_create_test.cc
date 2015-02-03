@@ -19,8 +19,8 @@ namespace {
 using::std::cout;
 using::std::endl;
 using::std::string;
-using LibSerial::SerialStream;
-using LibSerial::SerialStreamBuf;
+using ::LibSerial::SerialStream;
+using ::LibSerial::SerialStreamBuf;
 
 unique_ptr<SerialStream> GetCreatesStream() {
   unique_ptr<SerialStream> virtual_create_port = MakeUnique<SerialStream>(
@@ -39,6 +39,7 @@ TEST(CreateTest, BadSerialPort) {
 TEST(CreateTest, LoopbackPortCreated) {
   unique_ptr<SerialStream> virtual_create_port = GetCreatesStream();
   EXPECT_NE(nullptr, virtual_create_port);
+  EXPECT_TRUE(virtual_create_port->IsOpen());
   EXPECT_NE(
     nullptr,
     Create::MakeFromPort(
