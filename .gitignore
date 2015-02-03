@@ -1,13 +1,19 @@
 # CMake files
 **/CMakeCache.txt
 **/CMakeFiles
+# CMake make
 **/Makefile
 **/*.cmake
 **/build/*
 **/Create
+# Cmake ninja
 **/*.ninja
 **/.ninja_deps
 **/.ninja_log
+# CMake eclipse
+**/.cproject
+**/.project
+**/.settings
 
 # Vim swp files
 **/*.swp
