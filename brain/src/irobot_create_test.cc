@@ -16,9 +16,9 @@
 
 namespace create {
 namespace {
-using::std::cout;
-using::std::endl;
-using::std::string;
+using ::std::cout;
+using ::std::endl;
+using ::std::string;
 using ::LibSerial::SerialStream;
 using ::LibSerial::SerialStreamBuf;
 
