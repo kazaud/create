@@ -73,7 +73,8 @@ static void sendInt16(SerialStream* s, short i) {
 
 unique_ptr<Create> Create::MakeFromPort(const string& serial_port_name) {
   unique_ptr<SerialStream> stream = MakeUnique<SerialStream>(
-      serial_port_name, SerialStreamBuf::BAUD_57600);
+      serial_port_name, SerialStreamBuf::BAUD_57600, SerialStreamBuf::CHAR_SIZE_8,
+      SerialStreamBuf::PARITY_NONE, 1, SerialStreamBuf::FLOW_CONTROL_NONE);
   if (!stream->IsOpen()) {
     cout << "Unable to open stream to port " << serial_port_name << endl;
     return nullptr;
@@ -82,12 +83,6 @@ unique_ptr<Create> Create::MakeFromPort(const string& serial_port_name) {
 }
 Create::Create(unique_ptr<SerialStream> stream)
     : currentMode_(OpenInterface::MODE_OFF), stream_(std::move(stream)) {
-  stream_->SetBaudRate(SerialStreamBuf::BAUD_57600);
-  stream_->SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-  stream_->SetNumOfStopBits(1);
-  stream_->SetParity(SerialStreamBuf::PARITY_NONE);
-  stream_->SetFlowControl(SerialStreamBuf::FLOW_CONTROL_NONE);
-
   //Discard header and previous data.
   while (stream_->rdbuf()->in_avail() > 0) {
     stream_->ignore();

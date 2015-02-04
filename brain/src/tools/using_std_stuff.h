@@ -10,6 +10,7 @@
 #include <vector>
 
 using::std::cout;
+using::std::cin;
 using::std::endl;
 using::std::initializer_list;
 using::std::iostream;
