@@ -15,12 +15,13 @@ include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories(${Create_SOURCE_DIR}/gtest-1.7.0/include)
 link_directories(${Create_SOURCE_DIR}/gtest-1.7.0/src)
 
-
-add_executable(Create src/controller_main.cc src/irobot_create.cc src/irobot_create.h)
+set(CREATE_SRCS src/irobot_create src/irobot_create_open_interface)
+add_executable(Create src/controller_main ${CREATE_SRCS})
 target_link_libraries(Create ${catkin_LIBRARIES} serial)
 
-# Add a test
-add_executable(runUnitTests src/irobot_create_test.cc src/irobot_create.cc src/irobot_create.h)
+# Build tests
+set(TEST_SRCS src/irobot_create_test)
+add_executable(runUnitTests ${TEST_SRCS} ${CREATE_SRCS})
 target_link_libraries(runUnitTests gtest gtest_main)
 target_link_libraries(runUnitTests ${catkin_LIBRARIES} serial)
 add_test(runUnitTests runUnitTests)

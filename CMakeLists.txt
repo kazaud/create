@@ -7,7 +7,7 @@ enable_testing()
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-	list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs")
+	list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -Wall -Wextra -Winit-self -Wno-long-long -Wold-style-cast -Woverloaded-virtual -Wuninitialized -Wmissing-declarations -Winit-self -pedantic -Werror -g -ftest-coverage -fprofile-arcs")
 endif()
 add_subdirectory (brain brain/build)
 

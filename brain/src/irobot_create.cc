@@ -6,21 +6,22 @@
 #include <sstream>
 #include <stdio.h>
 #include <unistd.h>
+#include "tools/collection_utils.h"
 
-using::LibSerial::SerialStream;
-using::LibSerial::SerialStreamBuf;
+using ::LibSerial::SerialStream;
+using ::LibSerial::SerialStreamBuf;
 
 //TODO: take into account the 15ms/sent command limit.
 
 namespace create {
 namespace {
-///// Push a 16 bits integer (high byte first) in a stream.
-//static void sendInt16(std::ostream& s, short i) {
-//const unsigned char v1 = i & 0xFFFF;
-//const unsigned char v2 = (i & 0xFFFF) >> 8;
-//s << v2 << v1;
-//}
-//
+// Push a 16 bits integer (high byte first) in a stream.
+static void sendInt16(SerialStream* s, short i) {
+  const unsigned char v1 = i & 0xFFFF;
+  const unsigned char v2 = (i & 0xFFFF) >> 8;
+  *s << v2 << v1;
+}
+
 ///// Receive a 16 bits integer (high byte first) in a stream.
 //static short receiveInt16(std::istream& s) {
 //unsigned char v1;
@@ -68,43 +69,25 @@ namespace {
 //return false;
 //}
 //
-
-//# define TOLIBSERIALBAUD_CASE(X)\
-//case create::Create::X: return LibSerial::SerialStreamBuf::X
-//
-//static LibSerial::SerialStreamBuf::BaudRateEnum toLibSerialBaud(create::Create::Baud& b) {
-//switch (b) {
-//TOLIBSERIALBAUD_CASE(BAUD_300);
-//TOLIBSERIALBAUD_CASE(BAUD_600);
-//TOLIBSERIALBAUD_CASE(BAUD_1200);
-//TOLIBSERIALBAUD_CASE(BAUD_2400);
-//TOLIBSERIALBAUD_CASE(BAUD_4800);
-//TOLIBSERIALBAUD_CASE(BAUD_9600);
-////TOLIBSERIALBAUD_CASE (BAUD_14400);
-//TOLIBSERIALBAUD_CASE(BAUD_19200);
-////TOLIBSERIALBAUD_CASE (BAUD_28800);
-//TOLIBSERIALBAUD_CASE(BAUD_38400);
-//TOLIBSERIALBAUD_CASE(BAUD_57600);
-//TOLIBSERIALBAUD_CASE(BAUD_115200);
-//default:
-//throw create::InvalidArgument();
-//}
-//}
-//# undef TOLIBSERIALBAUD_CASE
-//}
-//
-} //end of namespace
+}//end of namespace
 
 unique_ptr<Create> Create::MakeFromPort(const string& serial_port_name) {
   unique_ptr<SerialStream> stream = MakeUnique<SerialStream>(
-    serial_port_name, SerialStreamBuf::BAUD_57600);
+      serial_port_name, SerialStreamBuf::BAUD_57600);
   if (!stream->IsOpen()) {
     cout << "Unable to open stream to port " << serial_port_name << endl;
     return nullptr;
   }
-  return unique_ptr<Create>(new Create(std::move(stream)));
+  return unique_ptr < Create > (new Create(std::move(stream)));
 }
-Create::Create(unique_ptr<SerialStream> stream): currentMode_(OpenInterface::MODE_OFF), stream_(std::move(stream)) {
+Create::Create(unique_ptr<SerialStream> stream)
+    : currentMode_(OpenInterface::MODE_OFF), stream_(std::move(stream)) {
+  stream_->SetBaudRate(SerialStreamBuf::BAUD_57600);
+  stream_->SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
+  stream_->SetNumOfStopBits(1);
+  stream_->SetParity(SerialStreamBuf::PARITY_NONE);
+  stream_->SetFlowControl(SerialStreamBuf::FLOW_CONTROL_NONE);
+
   //Discard header and previous data.
   while (stream_->rdbuf()->in_avail() > 0) {
     stream_->ignore();
@@ -113,136 +96,98 @@ Create::Create(unique_ptr<SerialStream> stream): currentMode_(OpenInterface::MOD
   sendStartCommand();
 }
 //
-Create::~Create() {}
-//
-//Create::Create(LibSerial::SerialStream& stream)
-//throw(InvalidArgument, LibSerialNotAvailable): currentMode_(IROBOT_CREATE_OFF), stream_(stream), INITIALIZE_SENSORS() {
-//using namespace LibSerial;
-//stream.SetBaudRate(SerialStreamBuf::BAUD_57600);
-//stream.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-//stream.SetNumOfStopBits(1);
-//stream.SetParity(SerialStreamBuf::PARITY_NONE);
-//stream.SetFlowControl(SerialStreamBuf::FLOW_CONTROL_NONE);
-//if (!stream.IsOpen()) {
-//std::cout << "Stream is not open!" << std::endl;
-//throw InvalidArgument();
-//}
-//init();
-//}
-//
-//
-//void Create::init() throw(InvalidArgument) {
-//if (!stream_.good()) {
-//std::cout << "Stream is not good!" << std::endl;
-//throw InvalidArgument();
-//}
-//stream_.exceptions(std::iostream::eofbit
-//| std::iostream::failbit
-//| std::iostream::badbit);
-//
-//stream_.exceptions(std::iostream::eofbit
-//| std::iostream::failbit
-//| std::iostream::badbit);
-//
-////Discard header and previous data.
-//while (stream_.rdbuf()->in_avail() > 0) {
-//stream_.ignore();
-//}
-//
-//sendStartCommand();
-//}
-//
-//Create::~Create() throw()
-//{}
-//
-//void Create::sendBaudCommand(Baud baud)
-//throw(CommandNotAvailable, InvalidArgument) {
-//if (currentMode_ < IROBOT_CREATE_PASSIVE) {
-//throw CommandNotAvailable();
-//}
-//if (baud < 0 || baud > BAUD_115200) {
-//throw InvalidArgument();
-//}
-//const unsigned char op = OPCODE_BAUD;
-//const unsigned char b = baud;
-//stream_ << op << b;
-//stream_.flush();
-//
-//{
-//LibSerial::SerialStream* stream =
-//dynamic_cast<LibSerial::SerialStream*>(&stream_);
-//if (!!stream) {
-//stream->SetBaudRate(toLibSerialBaud(baud));
-//}
-//}
-//
-//usleep(100 * 1000);
-//}
+Create::~Create() {
+}
 
-void Create::sendStartCommand() {
-  if (currentMode_ != OpenInterface::MODE_OFF) {
-    return;
+bool Create::sendBaudCommand(OpenInterface::Baud baud) {
+  if (currentMode_ < OpenInterface::MODE_PASSIVE) {
+    return false;
+  }
+  if (baud < 0 || baud > OpenInterface::BAUD_115200) {
+    return false;
+  }
+  if (!ContainsKey(OpenInterface::kBaudMap, baud)) {
+    return false;
+  }
+
+  const unsigned char op = OpenInterface::OPCODE_BAUD;
+  const unsigned char b = baud;
+  *stream_ << op << b;
+  stream_->flush();
+
+  stream_->SetBaudRate(OpenInterface::kBaudMap.at(baud));
+
+  usleep(100 * 1000);
+  return true;
+}
+
+bool Create::sendStartCommand() {
+  if (currentMode_ == OpenInterface::MODE_PASSIVE) {
+    return false;
   }
   const unsigned char op = OpenInterface::OPCODE_START;
 
   *stream_ << op;
   stream_->flush();
   currentMode_ = OpenInterface::MODE_PASSIVE;
+  return true;
 }
 
-//void Create::sendSafeCommand() throw(CommandNotAvailable) {
-//if (currentMode_ < IROBOT_CREATE_PASSIVE) {
-//throw CommandNotAvailable();
-//}
-//const unsigned char op = OPCODE_SAFE;
-//stream_ << op;
-//stream_.flush();
-//currentMode_ = IROBOT_CREATE_SAFE;
-//}
-//
-//void Create::sendFullCommand() throw(CommandNotAvailable) {
-//if (currentMode_ < IROBOT_CREATE_PASSIVE) {
-//throw CommandNotAvailable();
-//}
-//const unsigned char op = OPCODE_FULL;
-//stream_ << op;
-//stream_.flush();
-//currentMode_ = IROBOT_CREATE_FULL;
-//}
-//
-//void Create::sendDemoCommand(Demo demo) throw(CommandNotAvailable, InvalidArgument) {
-//if (currentMode_ < IROBOT_CREATE_PASSIVE) {
-//throw CommandNotAvailable();
-//}
-//if (demo != DEMO_ABORT && (demo < 0 || demo > DEMO_BANJO)) {
-//throw InvalidArgument();
-//}
-//const unsigned char op = OPCODE_DEMO;
-//const unsigned char d = demo;
-//stream_ << op << d;
-//stream_.flush();
-//currentMode_ = IROBOT_CREATE_PASSIVE;
-//}
-//
-//void Create::sendDriveCommand(short velocity, short radius)
-//throw(CommandNotAvailable, InvalidArgument) {
-//if (currentMode_ < IROBOT_CREATE_SAFE) {
-//throw CommandNotAvailable();
-//}
-//if (velocity < VELOCITY_MIN || velocity > VELOCITY_MAX) {
-//throw InvalidArgument();
-//}
-//if (radius < RADIUS_MIN || radius > RADIUS_MAX) {
-//throw InvalidArgument();
-//}
-//
-//const unsigned char op = OPCODE_DRIVE;
-//
-//stream_ << op;
-//sendInt16(stream_, velocity);
-//sendInt16(stream_, radius);
-//stream_.flush();
-//}
+bool Create::sendSafeCommand() {
+  if (currentMode_ == OpenInterface::MODE_SAFE) {
+    return false;
+  }
+  const unsigned char op = OpenInterface::OPCODE_SAFE;
+  *stream_ << op;
+  stream_->flush();
+  currentMode_ = OpenInterface::MODE_SAFE;
+  return true;
+}
+
+bool Create::sendFullCommand() {
+  if (currentMode_ == OpenInterface::MODE_FULL) {
+    return false;
+  }
+  const unsigned char op = OpenInterface::OPCODE_FULL;
+  *stream_ << op;
+  stream_->flush();
+  currentMode_ = OpenInterface::MODE_FULL;
+  return true;
+}
+
+bool Create::sendDemoCommand(OpenInterface::Demo demo) {
+  if (currentMode_ == OpenInterface::MODE_OFF) {
+    return false;
+  }
+  if (demo != OpenInterface::DEMO_ABORT
+      && (demo < 0 || demo > OpenInterface::DEMO_BANJO)) {
+    return false;
+  }
+  const unsigned char op = OpenInterface::OPCODE_DEMO;
+  const unsigned char d = demo;
+  *stream_ << op << d;
+  stream_->flush();
+  currentMode_ = OpenInterface::MODE_PASSIVE;
+  return true;
+}
+
+bool Create::sendDriveCommand(short velocity, short radius) {
+  if (currentMode_ < OpenInterface::MODE_SAFE) {
+    return false;
+  }
+  if (velocity < OpenInterface::VELOCITY_MIN || velocity > OpenInterface::VELOCITY_MAX
+      || radius < OpenInterface::RADIUS_MIN || radius > OpenInterface::RADIUS_MAX) {
+    return false;;
+  }
+
+  const unsigned char op = OpenInterface::OPCODE_DRIVE;
+
+  *stream_ << op;
+  sendInt16(stream_.get(), velocity);
+  sendInt16(stream_.get(), radius);
+  stream_->flush();
+  return true;
+}
 //
 //void Create::sendDriveCommand(short velocity, DriveCommand cmd)
 //throw(CommandNotAvailable, InvalidArgument) {
@@ -421,27 +366,27 @@ void Create::sendStartCommand() {
 //}
 //
 ///// Internal macro.
-//#define MAKE_SENSOR_CMD(OP, CMD)\
-//  if (currentMode_ < IROBOT_CREATE_PASSIVE) {\
-//    throw CommandNotAvailable();}\
-//  if (packets.size() > 255) {\
-//    throw InvalidArgument();}\
-//\
-//  std::stringstream ss;\
-//  for (sensorPackets_t::const_iterator it = packets.begin();\
-//       it != packets.end();++it)\
-//  {\
-//    if (*it < SENSOR_GROUP_0\
-//        || *it > SENSOR_REQUESTED_LEFT_VELOCITY) {\
-//      throw InvalidArgument();}\
-//    const unsigned char p = *it;\
-//    ss << p;\
-//    CMD;\
-//  }\
-//\
-//  const unsigned char op = (OP);\
-//  const unsigned char size = packets.size();\
-//  stream_ << op << size << ss.str();\
+//#define MAKE_SENSOR_CMD(OP, CMD)
+//  if (currentMode_ < IROBOT_CREATE_PASSIVE) {
+//    throw CommandNotAvailable();}
+//  if (packets.size() > 255) {
+//    throw InvalidArgument();}
+//
+//  std::stringstream ss;
+//  for (sensorPackets_t::const_iterator it = packets.begin();
+//       it != packets.end();++it)
+//  {
+//    if (*it < SENSOR_GROUP_0
+//        || *it > SENSOR_REQUESTED_LEFT_VELOCITY) {
+//      throw InvalidArgument();}
+//    const unsigned char p = *it;
+//    ss << p;
+//    CMD;
+//  }
+//
+//  const unsigned char op = (OP);
+//  const unsigned char size = packets.size();
+//  stream_ << op << size << ss.str();
 //  stream_.flush()
 //
 ////FIXME: check that the amount of data can be queried successfully.
@@ -612,40 +557,40 @@ void Create::sendStartCommand() {
 //}
 //
 //
-//#define GEN_SENSOR(PACKET, SENSOR, TYPE)\
-//case PACKET:\
-//{\
-//  unsigned char v = 0;\
-//  if (!safeGet(stream, v)) {\
-//    return false;}\
-//  SENSOR = static_cast<TYPE>(v);\
-//}\
+//#define GEN_SENSOR(PACKET, SENSOR, TYPE)
+//case PACKET:
+//{
+//  unsigned char v = 0;
+//  if (!safeGet(stream, v)) {
+//    return false;}
+//  SENSOR = static_cast<TYPE>(v);
+//}
 //break
 //
-//#define CHAR_SENSOR(PACKET, SENSOR)\
+//#define CHAR_SENSOR(PACKET, SENSOR)
 //  GEN_SENSOR(PACKET, SENSOR, char)
 //
-//#define UCHAR_SENSOR(PACKET, SENSOR)\
+//#define UCHAR_SENSOR(PACKET, SENSOR)
 //  GEN_SENSOR(PACKET, SENSOR, unsigned char)
 //
-//#define INT_SENSOR(PACKET, SENSOR)\
-//case PACKET:\
-//{\
-//  SENSOR = receiveInt16(stream);\
-//}\
+//#define INT_SENSOR(PACKET, SENSOR)
+//case PACKET:
+//{
+//  SENSOR = receiveInt16(stream);
+//}
 //break
 //
-//#define GROUP_SENSOR(PACKET, MIN, MAX)\
-//  {\
-//  case PACKET:\
-//    bool res = true;\
-//    for (SensorPacket sensor = static_cast<SensorPacket>(MIN);\
-//         sensor < static_cast<SensorPacket>(MAX);\
-//         sensor = static_cast<SensorPacket>(sensor + 1)) {\
-//      res = res && readSensorPacket(sensor, stream);}\
-//    if (!res) {\
-//      return false;}\
-//  }\
+//#define GROUP_SENSOR(PACKET, MIN, MAX)
+//  {
+//  case PACKET:
+//    bool res = true;
+//    for (SensorPacket sensor = static_cast<SensorPacket>(MIN);
+//         sensor < static_cast<SensorPacket>(MAX);
+//         sensor = static_cast<SensorPacket>(sensor + 1)) {
+//      res = res && readSensorPacket(sensor, stream);}
+//    if (!res) {
+//      return false;}
+//  }
 //  break
 //
 //bool Create::readSensorPacket(SensorPacket sensor, std::istream& stream) {
@@ -842,12 +787,12 @@ void Create::sendStartCommand() {
 //}
 //}
 //
-//#define MK_SENSOR_GETTER(TYPE, NAME)\
-//  TYPE\
-//  Create::NAME()\
-//  {\
-//    updateSensors();\
-//    return NAME ## _;\
+//#define MK_SENSOR_GETTER(TYPE, NAME)
+//  TYPE
+//  Create::NAME()
+//  {
+//    updateSensors();
+//    return NAME ## _;
 //  }
 //
 //MK_SENSOR_GETTER(bool, wheeldropCaster)
@@ -901,4 +846,4 @@ void Create::sendStartCommand() {
 OpenInterface::Mode Create::mode() {
   return currentMode_;
 }
-} //end of namespace create
+}  //end of namespace create

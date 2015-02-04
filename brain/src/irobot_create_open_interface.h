@@ -9,8 +9,10 @@
 #define ENUMS_H_
 
 #include <vector>
-
-using std::vector;
+#include <initializer_list>
+#include <SerialStream.h>
+#include "tools/make_unique.h"
+#include "tools/using_std_stuff.h"
 
 namespace create {
 class OpenInterface {
@@ -70,6 +72,8 @@ public:
     //In this mode, be sure to keep at least 15 µs between each command.
     BAUD_115200 = 11
   };
+
+  static const map<Baud, LibSerial::SerialStreamBuf::BaudRateEnum> kBaudMap;
 
   //Enumerate built-in demos.
   enum Demo {
@@ -476,6 +480,6 @@ private:
   OpenInterface();
   virtual ~OpenInterface();
 };
-} //namespace create
+}  //namespace create
 
 #endif //ENUMS_H_

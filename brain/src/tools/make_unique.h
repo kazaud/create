@@ -8,19 +8,7 @@
 #ifndef MAKE_UNIQUE_H_
 #define MAKE_UNIQUE_H_
 
-#include <iostream>
-#include <memory>
-#include <queue>
-#include <string>
-#include <vector>
-
-using::std::cout;
-using::std::endl;
-using::std::iostream;
-using::std::queue;
-using::std::string;
-using::std::unique_ptr;
-using::std::vector;
+#include "tools/using_std_stuff.h"
 
 template<typename T, typename... Args>
 unique_ptr<T> make_unique_helper(std::false_type, Args && ... args) {
