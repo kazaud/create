@@ -35,16 +35,19 @@ protected:
     EXPECT_EQ(0, virtual_create_port_->rdbuf()->in_avail());
   }
   void ExpectData(const initializer_list<int>& data_list) {
+    int byte_count = 0;
     for (int data : data_list) {
       int timeout = 1000;
       while (virtual_create_port_->rdbuf()->in_avail() == 0 && timeout > 0) {
         timeout -= 50;
         usleep(50);
       }
-      ASSERT_TRUE(virtual_create_port_->rdbuf()->in_avail())<< "Timedout while waiting for byte " << data;
+      ASSERT_TRUE(virtual_create_port_->rdbuf()->in_avail())<< "Timed out while waiting for byte " << byte_count << " of value " << data;
       char next_byte;
       virtual_create_port_->get(next_byte);
-      EXPECT_EQ(static_cast<char>(data), next_byte);;
+      EXPECT_EQ(static_cast<char>(data), next_byte) << "Byte " << byte_count
+          << " was not as expected!";
+      ++byte_count;
     }
   }
 
@@ -94,7 +97,7 @@ TEST_F(CreateTest, CanChangeModes) {
         OpenInterface::OPCODE_SAFE, OpenInterface::OPCODE_START});
 }
 
-TEST_F(CreateTest, DriveCommand) {
+TEST_F(CreateTest, DriveCommand_WithRadius) {
   unique_ptr<Create> robot = Create::MakeFromPort(kSerialPort);
   EXPECT_FALSE(robot->sendDriveCommand(2, 2));
   EXPECT_TRUE(robot->sendFullCommand());
@@ -102,6 +105,53 @@ TEST_F(CreateTest, DriveCommand) {
   ExpectData(
     {OpenInterface::OPCODE_START, OpenInterface::OPCODE_FULL,
         OpenInterface::OPCODE_DRIVE, 0x0000, 0x0002, 0x0000, 0x0002});
+}
+
+TEST_F(CreateTest, DriveCommand_WithCommand) {
+  unique_ptr<Create> robot = Create::MakeFromPort(kSerialPort);
+  EXPECT_FALSE(
+      robot->sendDriveCommand(2, OpenInterface::DriveCommand::DRIVE_STRAIGHT));
+  EXPECT_TRUE(robot->sendFullCommand());
+  EXPECT_TRUE(
+      robot->sendDriveCommand(2, OpenInterface::DriveCommand::DRIVE_STRAIGHT));
+  EXPECT_TRUE(
+      robot->sendDriveCommand(2,
+                              OpenInterface::DriveCommand::DRIVE_INPLACE_CLOCKWISE));
+  EXPECT_TRUE(
+      robot->sendDriveCommand(
+          2, OpenInterface::DriveCommand::DRIVE_INPLACE_COUNTERCLOCKWISE));
+  ExpectData(
+    {OpenInterface::OPCODE_START, OpenInterface::OPCODE_FULL,
+        OpenInterface::OPCODE_DRIVE, 0x00, 0x02, 0x80, 0x00,
+        OpenInterface::OPCODE_DRIVE, 0x00, 0x02, 0xFF, 0xFF,
+        OpenInterface::OPCODE_DRIVE, 0x00, 0x02, 0x00, 0x01});
+}
+
+TEST_F(CreateTest, DriveDirectCommand) {
+  unique_ptr<Create> robot = Create::MakeFromPort(kSerialPort);
+  EXPECT_FALSE(robot->sendDriveDirectCommand(2, 2));
+  EXPECT_TRUE(robot->sendFullCommand());
+  EXPECT_TRUE(robot->sendDriveDirectCommand(2, 2));
+  EXPECT_TRUE(robot->sendDriveDirectCommand(4, 4));
+  ExpectData(
+    {OpenInterface::OPCODE_START, OpenInterface::OPCODE_FULL,
+        OpenInterface::OPCODE_DRIVE_DIRECT, 0x00, 0x02, 0x00, 0x02,
+        OpenInterface::OPCODE_DRIVE_DIRECT, 0x00, 0x04, 0x00, 0x04});
+}
+
+TEST_F(CreateTest, LedCommand) {
+  unique_ptr<Create> robot = Create::MakeFromPort(kSerialPort);
+  EXPECT_FALSE(
+      robot->sendLedCommand(OpenInterface::LED_PLAY, OpenInterface::LED_COLOR_GREEN,
+                            OpenInterface::LED_INTENSITY_FULL));
+  EXPECT_TRUE(robot->sendFullCommand());
+  EXPECT_TRUE(
+      robot->sendLedCommand(OpenInterface::LED_PLAY, OpenInterface::LED_COLOR_GREEN,
+                            OpenInterface::LED_INTENSITY_FULL));
+  ExpectData(
+    {OpenInterface::OPCODE_START, OpenInterface::OPCODE_FULL,
+        OpenInterface::OPCODE_LEDS, OpenInterface::LED_PLAY,
+        OpenInterface::LED_COLOR_GREEN, OpenInterface::LED_INTENSITY_FULL});
 }
 }  //namespace
 }  //namespace create

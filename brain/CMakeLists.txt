@@ -15,7 +15,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories(${Create_SOURCE_DIR}/gtest-1.7.0/include)
 link_directories(${Create_SOURCE_DIR}/gtest-1.7.0/src)
 
-set(CREATE_SRCS src/irobot_create src/irobot_create_open_interface)
+set(CREATE_SRCS src/irobot_create src/irobot_create_open_interface src/tools/status)
 add_executable(Create src/controller_main ${CREATE_SRCS})
 target_link_libraries(Create ${catkin_LIBRARIES} serial)
 

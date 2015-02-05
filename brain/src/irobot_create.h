@@ -9,6 +9,7 @@
 
 #include "irobot_create_open_interface.h"
 #include "tools/make_unique.h"
+#include "tools/status.h"
 #include <SerialStream.h>
 #include <iostream>
 #include <memory>
@@ -17,143 +18,16 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <mutex>
 
 namespace create {
-//Class for communicating with iRobot hardware using the OpenInterface.
-class Create {
+
+// Thread safe base class that stores the state of the irobot create.
+class CreateBase {
 public:
-  //brief Construct an instance of Create.
-  //param serial_port_name name of the serial port to use.
-  static unique_ptr<Create> MakeFromPort(const string& serial_port_name);
-  virtual ~Create();
-
-  //Construct an instance of Create using serial port communication.
-  //stream Stream used for communication. Will check fail if stream is not open and valid
-  explicit Create(unique_ptr<LibSerial::SerialStream> stream);
-
-  bool sendBaudCommand(OpenInterface::Baud speed);
-  //Automatically done when the class is instanciated.
-  bool sendStartCommand();
-  bool sendSafeCommand();
-  bool sendFullCommand();
-  bool sendDemoCommand(OpenInterface::Demo demo);
-
-  //Drive the robot.
-  //param v Robot's velocity.
-  //param r Robot's turning radius.
-  //see sendDriveDirectCommand
-  bool sendDriveCommand(short v, short r);
-
-  //\Drive the robot using a special driving mode.
-  //v Robot's velocity.
-  //command Special driving mode.
-  bool sendDriveCommand(short v, OpenInterface::DriveCommand dc);
-
-  //Drive the two wheels separately.
-  //vr Right wheel's velocity.
-  //vl Left wheel's velocity.
-  bool sendDriveDirectCommand(short vr, short vl);
-
-  //Change led status.
-  //l Switch on/off advance or play leds.
-  //c Power led color.
-  //i Power led light intensity.
-  bool sendLedCommand(OpenInterface::Led l, unsigned char c, unsigned char i);
-
-  //Change the digital output values.
-  //d1 Switch on/off first digital output.
-  //d2 Switch on/off second digital output.
-  //d3 Switch on/off third digital output.
-  void sendDigitalOutputsCommand(bool d1, bool d2, bool d3);
-
-  //Drive low side drivers with variable power.
-  //lsd1 Low side driver 1 power.
-  //lsd2 Low side driver 2 power.
-  //lsd3 Low side driver 3 power.
-  bool sendPwmLowSideDriversCommand(unsigned char lsd1, unsigned char lsd2,
-      unsigned char lsd3);
-
-  //Switch on/off low side drivers.
-  //lsd1 Switch on/off low side driver 1.
-  //lsd2 Switch on/off low side driver 2.
-  //lsd3 Switch on/off low side driver 3.
-  //\see sendPwmLowSideDriversCommand
-  void sendLowSideDriversCommand(bool lsd1, bool lsd2, bool lsd3);
-
-  //Send an IR command on low side driver 1.
-  //The data will be encoded using the iRobot's Create receiver format.
-  //v Sent value.
-  void sendIrCommand(unsigned char v);
-
-  //Define a song.
-  //sid Song id.
-  //song Song to send.
-  bool sendSongCommand(unsigned char sid, const vector<OpenInterface::Note>& song);
-
-  //Play a song
-  //sid Sond id to play.
-  bool sendPlaySongCommand(unsigned char sid);
-
-  //Request the robot to send a particular sensor packet.
-  //sp Sensor packet to send.
-  bool sendSensorsCommand(OpenInterface::SensorPacket sp);
-
-  //Request the robot to send a list of sensor packets.
-  //lsp List of sensor packets to send
-  bool sendQueryListCommand(const vector<OpenInterface::SensorPacket>& lsp);
-
-  //Request the robot to start streaming some sensor packets.
-  //After the streaming is started, the requested values will be sent
-  //every 15ms.
-  //lsp List of sensor packets to stream.
-  bool sendStreamCommand(const vector<OpenInterface::SensorPacket>& lsp);
-
-  //Pause or resume sensor streaming.
-  //st Stream state to set.
-  bool sendPauseStreamCommand(OpenInterface::StreamState st);
-
-  //Send a script.
-  //script Script to send.
-  bool sendScriptCommand(const vector<OpenInterface::Opcode>& script);
-
-  //Play the current stored script.
-  void sendPlayScriptCommand();
-
-  //Show the stored script.
-  void sendShowScriptCommand();
-
-  //Make the robot wait for a specific amount of time.
-  //t Time to wait in tenth of a second (resolution of 15 ms).
-  void sendWaitTimeCommand(unsigned char t);
-
-  //Make the robot wait until it travelled a certain distance.
-  //d Distance to travel
-  void sendWaitDistanceCommand(short d);
-
-  //Make the robot wait until it has rotated enough.
-  //a Angle (in degrees)
-  void sendWaitAngleCommand(short a);
-
-  //Make the robot wait for a specific event.
-  //e Wait for this event.
-  //es Wait for this event state.
-  bool sendWaitEventCommand(OpenInterface::Event e, OpenInterface::EventState es =
-      OpenInterface::EVENT_OCCURRING);
-
-//// Read the stream to update sensors values.
-//// This handles both streamed data and specific queries
-//// through querylist or sensors commands.
-//void updateSensors ();
-//
-//// Read streamed sensors and update sensors values.
-//void readStream ();
-//
-//// \}
-//
-//// \{
-//
-  OpenInterface::Mode mode();
-
+  OpenInterface::Mode mode() const {
+    return current_mode_;
+  }
   bool wheeldropCaster() const {
     return wheeldropCaster_;
   }
@@ -169,7 +43,6 @@ public:
   bool bumpRight() const {
     return bumpRight_;
   }
-
   //Get wall sensor value.
   bool wall() const {
     return wall_;
@@ -297,26 +170,12 @@ public:
   short requestedRightVelocity() const {
     return requestedRightVelocity_;
   }
-
 protected:
-//// Read a specific sensor packet and update sensors values.
-//// The next expected sensor packet will be read.
-//bool readSensorPacket ();
-//
-//// Read sensor packet on a specified stream, update sensor values.
-//bool readSensorPacket(SensorPacket, std::istream &);
-//
-//// Code shared between constructors.
-//void init () throw(InvalidArgument);
-//
-//Current robot's mode.
-  OpenInterface::Mode currentMode_;
-
-  //Stream used for communication.
-  unique_ptr<LibSerial::SerialStream> stream_;
+  //Current robot's mode.
+  OpenInterface::Mode current_mode_ = OpenInterface::MODE_OFF;
 
   //List of sensors currently streamed.
-  vector<OpenInterface::SensorPacket> streamedSensors_;
+  vector<OpenInterface::SensorPacket> streamed_sensors_;
 
   //List of queried packets
   //Sensor packets that have to be read but which are not streamed.
@@ -416,6 +275,150 @@ protected:
   short requestedLeftVelocity_;
   //Last requested right velocity (drive direct command).
   short requestedRightVelocity_;
+private:
+  std::mutex mutex_;
+};
+//Class for communicating with iRobot hardware using the OpenInterface.
+class Create : public CreateBase {
+public:
+  //brief Construct an instance of Create.
+  //param serial_port_name name of the serial port to use.
+  static unique_ptr<Create> MakeFromPort(const string& serial_port_name);
+  virtual ~Create();
+
+  //Construct an instance of Create using serial port communication.
+  //stream Stream used for communication. Will check fail if stream is not open and valid
+  explicit Create(unique_ptr<LibSerial::SerialStream> stream);
+
+  bool sendBaudCommand(OpenInterface::Baud speed);
+  //Automatically done when the class is instanciated.
+  bool sendStartCommand();
+  bool sendSafeCommand();
+  bool sendFullCommand();
+  bool sendDemoCommand(OpenInterface::Demo demo);
+
+  //Drive the robot.
+  //param v Robot's velocity.
+  //param r Robot's turning radius.
+  //see sendDriveDirectCommand
+  bool sendDriveCommand(short v, short r);
+
+  //\Drive the robot using a special driving mode.
+  //v Robot's velocity.
+  //command Special driving mode.
+  bool sendDriveCommand(short v, OpenInterface::DriveCommand dc);
+
+  //Drive the two wheels separately.
+  //vr Right wheel's velocity.
+  //vl Left wheel's velocity.
+  bool sendDriveDirectCommand(short vr, short vl);
+
+  // Change led status.
+  // l Switch on/off advance or play leds.
+  // c Power led color.
+  // i Power led light intensity.
+  bool sendLedCommand(OpenInterface::Led l, unsigned char c, unsigned char i);
+
+  //Change the digital output values.
+  //d1 Switch on/off first digital output.
+  //d2 Switch on/off second digital output.
+  //d3 Switch on/off third digital output.
+  void sendDigitalOutputsCommand(bool d1, bool d2, bool d3);
+
+  //Drive low side drivers with variable power.
+  //lsd1 Low side driver 1 power.
+  //lsd2 Low side driver 2 power.
+  //lsd3 Low side driver 3 power.
+  bool sendPwmLowSideDriversCommand(unsigned char lsd1, unsigned char lsd2,
+      unsigned char lsd3);
+
+  //Switch on/off low side drivers.
+  //lsd1 Switch on/off low side driver 1.
+  //lsd2 Switch on/off low side driver 2.
+  //lsd3 Switch on/off low side driver 3.
+  //\see sendPwmLowSideDriversCommand
+  void sendLowSideDriversCommand(bool lsd1, bool lsd2, bool lsd3);
+
+  //Send an IR command on low side driver 1.
+  //The data will be encoded using the iRobot's Create receiver format.
+  //v Sent value.
+  void sendIrCommand(unsigned char v);
+
+  //Define a song.
+  //sid Song id.
+  //song Song to send.
+  bool sendSongCommand(unsigned char sid, const vector<OpenInterface::Note>& song);
+
+  //Play a song
+  //sid Sond id to play.
+  bool sendPlaySongCommand(unsigned char sid);
+
+  //Request the robot to send a particular sensor packet.
+  //sp Sensor packet to send.
+  bool sendSensorsCommand(OpenInterface::SensorPacket sp);
+
+  //Request the robot to send a list of sensor packets.
+  //lsp List of sensor packets to send
+  bool sendQueryListCommand(const vector<OpenInterface::SensorPacket>& lsp);
+
+  //Request the robot to start streaming some sensor packets.
+  //After the streaming is started, the requested values will be sent
+  //every 15ms.
+  //lsp List of sensor packets to stream.
+  bool sendStreamCommand(const vector<OpenInterface::SensorPacket>& lsp);
+
+  //Pause or resume sensor streaming.
+  //st Stream state to set.
+  bool sendPauseStreamCommand(OpenInterface::StreamState st);
+
+  //Send a script.
+  //script Script to send.
+  bool sendScriptCommand(const vector<OpenInterface::Opcode>& script);
+
+  //Play the current stored script.
+  void sendPlayScriptCommand();
+
+  //Show the stored script.
+  void sendShowScriptCommand();
+
+  //Make the robot wait for a specific amount of time.
+  //t Time to wait in tenth of a second (resolution of 15 ms).
+  void sendWaitTimeCommand(unsigned char t);
+
+  //Make the robot wait until it travelled a certain distance.
+  //d Distance to travel
+  void sendWaitDistanceCommand(short d);
+
+  //Make the robot wait until it has rotated enough.
+  //a Angle (in degrees)
+  void sendWaitAngleCommand(short a);
+
+  //Make the robot wait for a specific event.
+  //e Wait for this event.
+  //es Wait for this event state.
+  bool sendWaitEventCommand(OpenInterface::Event e, OpenInterface::EventState es =
+      OpenInterface::EVENT_OCCURRING);
+
+//// Read the stream to update sensors values.
+//// This handles both streamed data and specific queries
+//// through querylist or sensors commands.
+//void updateSensors ();
+
+  // Read streamed sensors and update sensors values.
+  Status readStream();
+
+protected:
+  Status readGroupSensor(int min, int max, std::istream* stream);
+
+  // Read a specific sensor packet and update sensors values.
+  // The next expected sensor packet will be read.
+  Status readSensorPacket();
+
+  // Read sensor packet on a specified stream, update sensor values.
+  Status readSensorPacket(OpenInterface::SensorPacket packet, std::istream* stream);
+
+  //Stream used for communication.
+  unique_ptr<LibSerial::SerialStream> stream_;
 };
 }  //end of namespace create
 

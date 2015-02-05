@@ -17,18 +17,12 @@ int main(int argc, char* argv[]) {
     fprintf(stdout, "Usage: %s /dev/ttyUSB0\n", argv[0]);
     return 1;
   }
-//  SerialStream stream(argv[1], SerialStreamBuf::BAUD_57600,
-//                      SerialStreamBuf::CHAR_SIZE_8, SerialStreamBuf::PARITY_NONE, 1,
-//                      SerialStreamBuf::FLOW_CONTROL_NONE);
-//  cout << "IsOpen? " << stream.IsOpen() << endl;
-//  stream << static_cast<char>(128);
-//  stream << static_cast<char>(136);
-//  stream << static_cast<char>(9);
 
   char input;
   unique_ptr < Create > create = Create::MakeFromPort(argv[1]);
   create->sendSafeCommand();
   while (true) {
+    //create->
     cout << "Turning right" << endl;
     create->sendDriveCommand(100, 1);
     cin >> input;
