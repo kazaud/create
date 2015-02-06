@@ -33,14 +33,20 @@ public:
   }
 };
 
-
-
 template<typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 string StrCat(Arg1 s1, Arg2 s2, Arg3 s3, Arg4 s4) {
   string value = StringLikeThings::ToString(s1);
   value += StringLikeThings::ToString(s2);
   value += StringLikeThings::ToString(s3);
   value += StringLikeThings::ToString(s4);
+  return std::move(value);
+}
+
+template<typename Arg1, typename Arg2, typename Arg3>
+string StrCat(Arg1 s1, Arg2 s2, Arg3 s3) {
+  string value = StringLikeThings::ToString(s1);
+  value += StringLikeThings::ToString(s2);
+  value += StringLikeThings::ToString(s3);
   return std::move(value);
 }
 

@@ -337,27 +337,24 @@ bool Create::sendLedCommand(OpenInterface::Led ledBits, unsigned char powerColor
 //stream_ << op << v;
 //stream_.flush();
 //}
-//
-////FIXME: check that the sensor can be queried successfully.
-////Take into account the currents streamed sensors.
-//void Create::sendSensorsCommand(SensorPacket packet)
-//throw(CommandNotAvailable, InvalidArgument) {
-//if (currentMode_ < IROBOT_CREATE_PASSIVE) {
-//throw CommandNotAvailable();
-//}
-//if (packet < SENSOR_GROUP_0
-//|| packet > SENSOR_REQUESTED_LEFT_VELOCITY) {
-//throw InvalidArgument();
-//}
-//
-//const unsigned char op = OPCODE_SENSORS;
-//const unsigned char p = packet;
-//stream_ << op << p;
-//
-//queriedSensors_.push(packet);
-//stream_.flush();
-//}
-//
+
+//FIXME: check that the sensor can be queried successfully.
+//Take into account the currents streamed sensors.
+Status Create::sendSensorsCommand(OpenInterface::SensorPacket packet) {
+  if (packet < OpenInterface::SENSOR_GROUP_0
+      || packet > OpenInterface::SENSOR_REQUESTED_LEFT_VELOCITY) {
+    return StrCat("Invalid packet requested with byte:", packet, ".");
+  }
+
+  const unsigned char op = OpenInterface::OPCODE_SENSORS;
+  const unsigned char p = packet;
+  *stream_ << op << p;
+
+  queriedSensors_.push(packet);
+  stream_->flush();
+  return Status::Ok;
+}
+
 ///// Internal macro.
 //#define MAKE_SENSOR_CMD(OP, CMD)
 //  if (currentMode_ < IROBOT_CREATE_PASSIVE) {

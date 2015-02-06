@@ -312,7 +312,7 @@ public:
     SENSOR_GROUP_4 = 4,
     //Groups packets 35 to 42.
     SENSOR_GROUP_5 = 5,
-    //Groups packets 7 to 42.
+    //Groups all packets 7 to 42.
     SENSOR_GROUP_6 = 6,
     //Wheel and bumper states.
     SENSOR_BUMPS_WHEELS_DROPS = 7,

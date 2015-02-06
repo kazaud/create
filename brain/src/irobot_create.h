@@ -355,7 +355,7 @@ public:
 
   //Request the robot to send a particular sensor packet.
   //sp Sensor packet to send.
-  bool sendSensorsCommand(OpenInterface::SensorPacket sp);
+  Status sendSensorsCommand(OpenInterface::SensorPacket sp);
 
   //Request the robot to send a list of sensor packets.
   //lsp List of sensor packets to send

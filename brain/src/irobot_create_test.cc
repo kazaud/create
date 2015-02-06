@@ -50,6 +50,11 @@ protected:
       ++byte_count;
     }
   }
+  void SendDataFromRobot(const initializer_list<int>& data_list) {
+    for (int data : data_list) {
+      *virtual_create_port_ << static_cast<char>(data);
+    }
+  }
 
   const char* kSerialPort =
       "/home/jkobe/git/create/brain/build/virtual_linux_serial_port";
@@ -152,6 +157,22 @@ TEST_F(CreateTest, LedCommand) {
     {OpenInterface::OPCODE_START, OpenInterface::OPCODE_FULL,
         OpenInterface::OPCODE_LEDS, OpenInterface::LED_PLAY,
         OpenInterface::LED_COLOR_GREEN, OpenInterface::LED_INTENSITY_FULL});
+}
+
+TEST_F(CreateTest, getSensorsCommand) {
+  unique_ptr<Create> robot = Create::MakeFromPort(kSerialPort);
+  EXPECT_FALSE(robot->bumpLeft());
+  EXPECT_FALSE(robot->bumpLeft());
+  CHECK_OK(robot->sendSensorsCommand(
+    {OpenInterface::SENSOR_GROUP_6}));
+  ExpectData(
+    {OpenInterface::OPCODE_START, OpenInterface::OPCODE_SENSORS,
+        OpenInterface::SENSOR_GROUP_6});
+  SendDataFromRobot(
+    {});
+  EXPECT_FALSE(robot->bumpLeft());
+  EXPECT_FALSE(robot->bumpRight());
+
 }
 }  //namespace
 }  //namespace create
